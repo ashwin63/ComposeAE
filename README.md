@@ -30,10 +30,6 @@ of source image and text query closer to the target images. We also propose a ro
 on the optimization problem. 
 ![Method](ComposeNet_final.jpg)
 
-## Results
-Our approach is able to outperform the state-of-the-art method TIRG on three benchmark datasets, namely: MIT-States, Fashion200k and Fashion IQ. 
-Some qualitative retrieval results on FashionIQ dataset are shown below:
-![Qual](FIQ_Retrieval.jpg)
 
 ## Requirements and Installation
 * Python 3.6
@@ -119,21 +115,10 @@ For training RealSpaceConcatAE (ComposeAE model but with Concatenation in Real S
 python -W ignore  main.py --dataset=fashionIQ --dataset_path=../data/fashionIQ/  --model=RealSpaceConcatAE --loss=batch_based_classification --learning_rate_decay_frequency=8000 --num_iters=100000 --use_bert True --use_complete_text_query True --comment=fashionIQ_RealSpaceConcatAE --log_dir ../logs/fashionIQ/
 ```
 
-## Notes:
-### Running the BERT model
-ComposeAE uses pretrained BERT model for encoding the text query. 
-Concretely, we employ BERT-as-service and use Uncased BERT-Base which outputs a 768-dimensional feature vector for a text query. 
-Detailed instructions on how to use it, can be found [here](https://github.com/hanxiao/bert-as-service).
-It is important to note that before running the training of the models, BERT-as-service should already be running in the background.
-
-### Monitoring Performance via tensorboard
-Run the following command for monitoring loss and retrieval performance of the models:
-
-```tensorboard --logdir ./logs/fashion200k/ --port 8898```
 
 
 ### Citation
-If you find this code useful in your research then please cite
+
 ```
 @InProceedings{Anwaar_2021_WACV,
     author    = {Anwaar, Muhammad Umer and Labintcev, Egor and Kleinsteuber, Martin},
