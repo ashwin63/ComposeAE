@@ -21,21 +21,11 @@ import argparse
 import sys
 import gc
 import time
-
-import sys
-sys.path.append("/content/ComposeAE/datasets.py")
 import datasets
-
-import sys
-sys.path.append("/content/ComposeAE/img_text_composition_models.py")
 import img_text_composition_models
-
 import numpy as np
 from tensorboardX import SummaryWriter
 from torch.autograd import Variable
-
-import sys
-sys.path.append("/content/ComposeAE/test_retrieval.py")
 import test_retrieval
 import torch
 import torch.utils.data
@@ -53,22 +43,22 @@ def parse_opt():
     """Parses the input arguments."""
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', type=str, default='')
-    parser.add_argument('--comment', type=str, default='mitstates_tirg_original')
-    parser.add_argument('--dataset', type=str, default='mitstates')
-    parser.add_argument('--dataset_path', type=str, default='/content/data/mitstates')
+    parser.add_argument('--comment', type=str)
+    parser.add_argument('--dataset', type=str)
+    parser.add_argument('--dataset_path', type=str)
     parser.add_argument('--model', type=str, default='composeAE')
     parser.add_argument('--image_embed_dim', type=int, default=512)
     parser.add_argument('--use_bert', type=bool, default=False)
     parser.add_argument('--use_complete_text_query', type=bool, default=False)
     parser.add_argument('--learning_rate', type=float, default=1e-2)
-    parser.add_argument('--learning_rate_decay_frequency', type=int, default=5000)
+    parser.add_argument('--learning_rate_decay_frequency', type=int, default=9999999)
     parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--weight_decay', type=float, default=5e-5)
+    parser.add_argument('--weight_decay', type=float, default=1e-6)
     parser.add_argument('--category_to_train', type=str, default='all')
-    parser.add_argument('--num_iters', type=int, default=100)
+    parser.add_argument('--num_iters', type=int, default=160000)
     parser.add_argument('--loss', type=str, default='soft_triplet')
     parser.add_argument('--loader_num_workers', type=int, default=4)
-    parser.add_argument('--log_dir', type=str, default='/content/logs/mitstates')
+    parser.add_argument('--log_dir', type=str, default='../logs/')
     parser.add_argument('--test_only', type=bool, default=False)
     parser.add_argument('--model_checkpoint', type=str, default='')
 
@@ -111,7 +101,6 @@ def load_dataset(opt):
                 torchvision.transforms.Normalize([0.485, 0.456, 0.406],
                                                  [0.229, 0.224, 0.225])
             ]))
-        print('main.py 3')
         testset = datasets.MITStates(
             path=opt.dataset_path,
             split='test',
@@ -156,7 +145,7 @@ def load_dataset(opt):
 
 def create_model_and_optimizer(opt, texts):
     """Builds the model and related optimizer."""
-    print("Creating model and optimizer for", opt.model)
+    print("Creating model and optimizer for", opt.comment)
     text_embed_dim = 512 if not opt.use_bert else 768
     
     if opt.model == 'tirg':
@@ -215,7 +204,7 @@ def train_loop(opt, loss_weights, logger, trainset, testset, model, optimizer):
     tic = time.time()
     l2_loss = torch.nn.MSELoss().cuda()
 
-    while it < opt.num_iters:
+    while epoch < opt.num_iters:
         epoch += 1
 
         # show/log stats
@@ -230,7 +219,7 @@ def train_loop(opt, loss_weights, logger, trainset, testset, model, optimizer):
 
         if epoch % 1 == 0:
             gc.collect()
-        
+
         # test
         if epoch % 3 == 1:
             tests = []
@@ -255,7 +244,6 @@ def train_loop(opt, loss_weights, logger, trainset, testset, model, optimizer):
 
         # run training for 1 epoch
         model.train()
-        print('model.train')
         trainloader = trainset.get_loader(
             batch_size=opt.batch_size,
             shuffle=True,
@@ -263,7 +251,6 @@ def train_loop(opt, loss_weights, logger, trainset, testset, model, optimizer):
             num_workers=opt.loader_num_workers)
 
         def training_1_iter(data):
-            print('data : ', data)
             assert type(data) is list
             img1 = np.stack([d['source_img_data'] for d in data])
             img1 = torch.from_numpy(img1).float()
@@ -338,7 +325,6 @@ def train_loop(opt, loss_weights, logger, trainset, testset, model, optimizer):
 
         for data in tqdm(trainloader, desc='Training for epoch ' + str(epoch)):
             it += 1
-            print(data)
             training_1_iter(data)
 
             # decay learning rate
@@ -386,6 +372,24 @@ def main():
 
         return 0
     train_loop(opt, loss_weights, logger, trainset, testset, model, optimizer)
+    if not opt.test_only:
+        print('Doing test after training')
+        #checkpoint = torch.load(opt.model_checkpoint)
+        #model.load_state_dict(checkpoint['model_state_dict'])
+        it = checkpoint['it']
+        model.eval()
+        tests = []
+        it = 0
+        for name, dataset in [('train', trainset), ('test', testset)]:
+            if opt.dataset == 'fashionIQ':
+                t = test_retrieval.fiq_test(opt, model, dataset)
+            else:
+                t = test_retrieval.test(opt, model, dataset)
+            tests += [(name + ' ' + metric_name, metric_value) for metric_name, metric_value in t]
+        for metric_name, metric_value in tests:
+            logger.add_scalar(metric_name, metric_value, it)
+            print('    ', metric_name, round(metric_value, 4))
+        return 0
     logger.close()
 
 
