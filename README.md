@@ -115,7 +115,7 @@ For training RealSpaceConcatAE (ComposeAE model but with Concatenation in Real S
 python -W ignore  main.py --dataset=fashionIQ --dataset_path=../data/fashionIQ/  --model=RealSpaceConcatAE --loss=batch_based_classification --learning_rate_decay_frequency=8000 --num_iters=100000 --use_bert True --use_complete_text_query True --comment=fashionIQ_RealSpaceConcatAE --log_dir ../logs/fashionIQ/
 ```
 
-
+Update: Code has been updated to not use BERT as a service
 
 ### Citation
 
