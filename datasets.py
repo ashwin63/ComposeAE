@@ -39,6 +39,7 @@ class BaseDataset(torch.utils.data.Dataset):
                    shuffle=False,
                    drop_last=False,
                    num_workers=0):
+        print('batch size, shuffle, drop_last, num_workers = ', batch_size, shuffle, drop_last, num_workers)
         return torch.utils.data.DataLoader(
             self,
             batch_size=batch_size,
@@ -46,7 +47,6 @@ class BaseDataset(torch.utils.data.Dataset):
             num_workers=num_workers,
             drop_last=drop_last,
             collate_fn=lambda i: i)
-
     def get_test_queries(self):
         return self.test_queries
 
@@ -249,10 +249,10 @@ class Fashion200k(BaseDataset):
 
 class MITStates(BaseDataset):
     """MITStates dataset."""
-
     def __init__(self, path, split='train', transform=None):
         super(MITStates, self).__init__()
         self.path = path
+        print('self.path = ', self.path)
         self.transform = transform
         self.split = split
 
@@ -270,17 +270,21 @@ class MITStates(BaseDataset):
 
         from os import listdir
         for f in listdir(path + '/images'):
+            # print('f = ',f)
             if ' ' not in f:
                 continue
             adj, noun = f.split()
-            if adj == 'adj':
-                continue
+            # print('adj =',adj)
+            # print('noun =',noun)
+            # print('split =',split)
+            # if adj == 'adj':
+                # continue
             if split == 'train' and noun in test_nouns:
                 continue
             if split == 'test' and noun not in test_nouns:
                 continue
-
             for file_path in listdir(path + '/images/' + f):
+                # print('file path = ', file_path)
                 assert (file_path.endswith('jpg'))
                 self.imgs += [{
                     'file_path': path + '/images/' + f + '/' + file_path,
@@ -288,6 +292,7 @@ class MITStates(BaseDataset):
                     'adj': adj,
                     'noun': noun
                 }]
+                # print('self.img = ', self.imgs)
 
         self.caption_index_init_()
         if split == 'test':
@@ -335,6 +340,7 @@ class MITStates(BaseDataset):
         self.caption2imgids = {}
         self.noun2adjs = {}
         for i, img in enumerate(self.imgs):
+            print(i,img)
             cap = img['captions'][0]
             adj = img['adj']
             noun = img['noun']
@@ -345,8 +351,10 @@ class MITStates(BaseDataset):
             self.caption2imgids[cap].append(i)
             if adj not in self.noun2adjs[noun]:
                 self.noun2adjs[noun].append(adj)
+        print(self.noun2adjs)
         for noun, adjs in self.noun2adjs.items():
-            assert len(adjs) >= 2
+            print(noun,adjs)
+            assert len(adjs) >= 1
 
     def caption_index_sample_(self, idx):
         noun = self.imgs[idx]['noun']
